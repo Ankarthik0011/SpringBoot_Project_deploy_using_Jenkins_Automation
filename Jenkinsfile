@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    
+
     parameters {
         choice(
             name: 'ACTION',
@@ -17,14 +17,19 @@ pipeline {
 
     stages {
 
-        /* ------------ IMAGE FLOW ------------ */
+        /* ---------- IMAGE FLOW ---------- */
         stage('Build Maven & Docker Image') {
             when {
                 expression { params.ACTION == 'IMAGE_FLOW' }
             }
             steps {
-                sh 'mvn clean package'
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh '''
+                  echo "Building Maven project..."
+                  mvn clean package
+
+                  echo "Building Docker image..."
+                  docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
             }
         }
 
@@ -70,7 +75,7 @@ pipeline {
             }
         }
 
-        /* ------------ COMPOSE FLOW ------------ */
+        /* ---------- COMPOSE FLOW ---------- */
         stage('Docker Compose Run') {
             when {
                 expression { params.ACTION == 'COMPOSE_FLOW' }
@@ -87,6 +92,19 @@ pipeline {
             steps {
                 sh 'docker-compose down'
             }
+        }
+    }
+
+    /* ---------- POST ACTIONS ---------- */
+    post {
+        success {
+            echo '✅ Pipeline executed successfully'
+        }
+        failure {
+            echo '❌ Pipeline failed'
+        }
+        always {
+            echo '🧹 Post cleanup completed'
         }
     }
 }
