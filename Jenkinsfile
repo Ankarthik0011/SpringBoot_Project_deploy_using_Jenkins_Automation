@@ -1,10 +1,6 @@
 pipeline {
     agent any
-
-    tools {
-        maven 'maven'
-    }
-
+    
     parameters {
         choice(
             name: 'ACTION',
