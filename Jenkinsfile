@@ -4,42 +4,50 @@ pipeline {
     parameters {
         choice(
             name: 'ACTION',
-            choices: ['IMAGE_FLOW', 'COMPOSE_FLOW'],
-            description: 'Choose Docker Image flow or Docker Compose flow'
+            choices: ['build', 'deploy', 'remove'],
+            description: 'Choose pipeline action'
         )
+
+        string(name: 'IMAGE_NAME', defaultValue: 'spring_project2003', description: 'Docker image name')
+        string(name: 'IMAGE_TAG', defaultValue: 'v1', description: 'Docker image tag')
+        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'nisargasj2907', description: 'DockerHub username')
     }
 
     environment {
-        IMAGE_NAME   = "randomuser/springboot-app"
-        IMAGE_TAG    = "v1"
-        DOCKER_CREDS = "dockerhub-3153"
+        IMAGE = "${params.DOCKERHUB_USERNAME}/${params.IMAGE_NAME}:${params.IMAGE_TAG}"
+        CONTAINER_NAME = "spring_project_container"
     }
 
     stages {
 
-        /* ---------- IMAGE FLOW ---------- */
-        stage('Build Maven & Docker Image') {
+        stage('Checkout Code') {
             when {
-                expression { params.ACTION == 'IMAGE_FLOW' }
+                expression { params.ACTION == 'build' }
             }
             steps {
-                sh '''
-                  echo "Building Maven project..."
-                  mvn clean package
+                echo "Checking out source code"
+                git 'https://github.com/nisarga2907/spring_project2003.git'
+            }
+        }
 
-                  echo "Building Docker image..."
-                  docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                '''
+        stage('Build Docker Image') {
+            when {
+                expression { params.ACTION == 'build' }
+            }
+            steps {
+                echo "Building Docker image: ${IMAGE}"
+                sh 'docker build -t $IMAGE .'
             }
         }
 
         stage('Docker Login') {
             when {
-                expression { params.ACTION == 'IMAGE_FLOW' }
+                expression { params.ACTION == 'build' }
             }
             steps {
+                echo "Logging in to Docker Hub"
                 withCredentials([usernamePassword(
-                    credentialsId: "${DOCKER_CREDS}",
+                    credentialsId: 'dockerhub-3153',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
@@ -48,63 +56,58 @@ pipeline {
             }
         }
 
-        stage('Push Image to DockerHub') {
+        stage('Docker Push') {
             when {
-                expression { params.ACTION == 'IMAGE_FLOW' }
+                expression { params.ACTION == 'build' }
             }
             steps {
-                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                echo "Pushing image to Docker Hub"
+                sh 'docker push $IMAGE'
             }
         }
 
-        stage('Remove Local Docker Image') {
+        stage('Delete Local Image') {
             when {
-                expression { params.ACTION == 'IMAGE_FLOW' }
+                expression { params.ACTION == 'build' }
             }
             steps {
-                sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+                echo "Deleting local Docker image"
+                sh 'docker rmi $IMAGE || true'
             }
         }
 
-        stage('Docker Logout') {
+        stage('Deploy') {
             when {
-                expression { params.ACTION == 'IMAGE_FLOW' }
+                expression { params.ACTION == 'deploy' }
             }
             steps {
-                sh 'docker logout'
+                echo "Deploying application"
+                sh '''
+                docker-compose down || true
+                docker-compose up -d
+                '''
             }
         }
 
-        /* ---------- COMPOSE FLOW ---------- */
-        stage('Docker Compose Run') {
+        stage('Remove') {
             when {
-                expression { params.ACTION == 'COMPOSE_FLOW' }
+                expression { params.ACTION == 'remove' }
             }
             steps {
-                sh 'docker-compose up -d'
-            }
-        }
-
-        stage('Docker Compose Remove') {
-            when {
-                expression { params.ACTION == 'COMPOSE_FLOW' }
-            }
-            steps {
-                sh 'docker-compose down'
+                echo "Removing container and image"
+                sh '''
+                docker rm -f spring_project_container || true
+                docker rmi -f $IMAGE || true
+                '''
             }
         }
     }
 
-    /* ---------- POST ACTIONS ---------- */
     post {
-        success {
-            echo '✅ Pipeline executed successfully'
-        }
-        failure {
-            echo '❌ Pipeline failed'
-        }
         always {
-            echo '🧹 Post cleanup completed'
+            echo "Logging out from Docker Hub"
+            sh 'docker logout || true'
+            echo "Pipeline execution completed"
         }
     }
 }
