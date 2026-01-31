@@ -7,9 +7,21 @@ pipeline {
             choices: ['build', 'deploy', 'remove'],
             description: 'Choose pipeline action'
         )
-        string(name: 'IMAGE_NAME', defaultValue: 'spring_project2003')
-        string(name: 'IMAGE_TAG', defaultValue: 'v1')
-        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'karthikan123')
+        string(
+            name: 'IMAGE_NAME',
+            defaultValue: 'spring_project2003',
+            description: 'Docker image name'
+        )
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: 'v1',
+            description: 'Docker image tag'
+        )
+        string(
+            name: 'DOCKERHUB_USERNAME',
+            defaultValue: 'karthikan123',
+            description: 'DockerHub username'
+        )
     }
 
     environment {
@@ -18,13 +30,17 @@ pipeline {
 
     stages {
 
+        /* ================= CHECKOUT ================= */
         stage('Checkout Code') {
             when { expression { params.ACTION == 'build' } }
             steps {
-                git 'https://github.com/Ankarthik0011/SpringBoot_Project_deploy_using_Jenkins.git'
+                git branch: 'master',
+                    url: 'https://github.com/Ankarthik0011/SpringBoot_Project_deploy_using_Jenkins_Automation.git',
+                    credentialsId: 'github-creds'
             }
         }
 
+        /* ================= BUILD ================= */
         stage('Build Docker Image') {
             when { expression { params.ACTION == 'build' } }
             steps {
@@ -37,10 +53,10 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-3153',
-                    usernameVariable: 'USER',
-                    passwordVariable: 'PASS'
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
@@ -59,6 +75,7 @@ pipeline {
             }
         }
 
+        /* ================= DEPLOY ================= */
         stage('Deploy') {
             when { expression { params.ACTION == 'deploy' } }
             steps {
@@ -70,6 +87,7 @@ pipeline {
             }
         }
 
+        /* ================= REMOVE ================= */
         stage('Remove') {
             when { expression { params.ACTION == 'remove' } }
             steps {
@@ -81,7 +99,7 @@ pipeline {
     post {
         always {
             sh 'docker logout || true'
-            echo "Pipeline execution completed"
+            echo "Pipeline execution completed successfully"
         }
     }
 }
