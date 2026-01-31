@@ -7,105 +7,79 @@ pipeline {
             choices: ['build', 'deploy', 'remove'],
             description: 'Choose pipeline action'
         )
-
-        string(name: 'IMAGE_NAME', defaultValue: 'spring_project2003', description: 'Docker image name')
-        string(name: 'IMAGE_TAG', defaultValue: 'v1', description: 'Docker image tag')
-        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'karthikan123', description: 'DockerHub username')
+        string(name: 'IMAGE_NAME', defaultValue: 'spring_project2003')
+        string(name: 'IMAGE_TAG', defaultValue: 'v1')
+        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'karthikan123')
     }
 
     environment {
-        IMAGE = "${params.DOCKERHUB_USERNAME}/${params.IMAGE_NAME}:${params.IMAGE_TAG}"
-        CONTAINER_NAME = "spring_project_container"
+        IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
     }
 
     stages {
 
         stage('Checkout Code') {
-            when {
-                expression { params.ACTION == 'build' }
-            }
+            when { expression { params.ACTION == 'build' } }
             steps {
-                echo "Checking out source code"
-                git 'https://github.com/nisarga2907/spring_project2003.git'
+                git 'https://github.com/Ankarthik0011/SpringBoot_Project_deploy_using_Jenkins.git'
             }
         }
 
         stage('Build Docker Image') {
-            when {
-                expression { params.ACTION == 'build' }
-            }
+            when { expression { params.ACTION == 'build' } }
             steps {
-                echo "Building Docker image: ${IMAGE}"
                 sh 'docker build -t $IMAGE .'
             }
         }
 
         stage('Docker Login') {
-            when {
-                expression { params.ACTION == 'build' }
-            }
+            when { expression { params.ACTION == 'build' } }
             steps {
-                echo "Logging in to Docker Hub"
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-3153',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'echo $PASS | docker login -u $USER --password-stdin'
                 }
             }
         }
 
         stage('Docker Push') {
-            when {
-                expression { params.ACTION == 'build' }
-            }
+            when { expression { params.ACTION == 'build' } }
             steps {
-                echo "Pushing image to Docker Hub"
                 sh 'docker push $IMAGE'
             }
         }
 
         stage('Delete Local Image') {
-            when {
-                expression { params.ACTION == 'build' }
-            }
+            when { expression { params.ACTION == 'build' } }
             steps {
-                echo "Deleting local Docker image"
                 sh 'docker rmi $IMAGE || true'
             }
         }
 
         stage('Deploy') {
-            when {
-                expression { params.ACTION == 'deploy' }
-            }
+            when { expression { params.ACTION == 'deploy' } }
             steps {
-                echo "Deploying application"
                 sh '''
                 docker-compose down || true
+                docker-compose pull
                 docker-compose up -d
                 '''
             }
         }
 
         stage('Remove') {
-            when {
-                expression { params.ACTION == 'remove' }
-            }
+            when { expression { params.ACTION == 'remove' } }
             steps {
-                echo "Removing container and image"
-                sh '''
-                docker rm -f spring_project_container || true
-                docker rmi -f $IMAGE || true
-                '''
+                sh 'docker-compose down || true'
             }
         }
     }
 
     post {
         always {
-            echo "Logging out from Docker Hub"
             sh 'docker logout || true'
             echo "Pipeline execution completed"
         }
