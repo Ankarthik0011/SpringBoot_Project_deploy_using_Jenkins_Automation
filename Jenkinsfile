@@ -10,7 +10,7 @@ pipeline {
 
         string(name: 'IMAGE_NAME', defaultValue: 'spring_project2003', description: 'Docker image name')
         string(name: 'IMAGE_TAG', defaultValue: 'v1', description: 'Docker image tag')
-        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'nisargasj2907', description: 'DockerHub username')
+        string(name: 'DOCKERHUB_USERNAME', defaultValue: 'karthikan123', description: 'DockerHub username')
     }
 
     environment {
