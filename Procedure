@@ -1,0 +1,20 @@
+AWS--->
+1 Instance + C7 flex + 10 GB Rom + 2 GB RAM + 2 CPU
+Mobax--->
+Sudo su -
+apt update 
+java --> JRE & JDK
+Jenkins Install from Official Website 
+Long Term Support file - COPY PASTE
+OPEN Public IP with ( 8080 ) port no 
+copy Id
+paste in Mobax -- Cat Id
+Copy Passwd -- Paste
+Install Available Pluginns-- Stage view  for Pipeline / Ocean Blue
+Credentials -- DockerHub (Username & Passwd & DockerHub Credential it is in Jenkinsfile)
+create Pipeline (Name)
+Configure ( Pipeline Poll SCM -- Choose Git and Paste Repo Link)
+BUILD--
+With Paramaters (Build & Deploy & Remove)
+After Deploy Access Spring Boot Web Application Using ( Public IP with (8085) Port no( Mentioned in Docker-Compose.file))
+After Remove The Web application Can't  be Accessed.
